@@ -1,0 +1,114 @@
+.resume-upload {
+  background: var(--white);
+}
+
+.upload-container {
+  max-width: 800px;
+  margin: 0 auto;
+}
+
+.upload-icon {
+  font-size: 4rem;
+  margin-bottom: var(--spacing-4);
+}
+
+.upload-area h3 {
+  color: var(--gray-700);
+  margin-bottom: var(--spacing-2);
+}
+
+.upload-area p {
+  color: var(--gray-500);
+  margin-bottom: var(--spacing-4);
+}
+
+.supported-formats {
+  font-size: var(--font-size-sm);
+  color: var(--gray-400);
+  padding: var(--spacing-2) var(--spacing-4);
+  background: var(--gray-100);
+  border-radius: var(--radius-lg);
+  display: inline-block;
+}
+
+.uploaded-files {
+  margin-top: var(--spacing-8);
+  background: var(--white);
+  border-radius: var(--radius-xl);
+  padding: var(--spacing-6);
+  box-shadow: var(--shadow-md);
+}
+
+.uploaded-files h4 {
+  color: var(--gray-700);
+  margin-bottom: var(--spacing-4);
+}
+
+.file-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-3);
+  margin-bottom: var(--spacing-6);
+}
+
+.file-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: var(--spacing-3) var(--spacing-4);
+  background: var(--gray-50);
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--gray-200);
+}
+
+.file-info {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-1);
+}
+
+.file-name {
+  font-weight: 500;
+  color: var(--gray-700);
+}
+
+.file-size {
+  font-size: var(--font-size-sm);
+  color: var(--gray-500);
+}
+
+.remove-btn {
+  background: var(--error);
+  color: var(--white);
+  border: none;
+  border-radius: 50%;
+  width: 24px;
+  height: 24px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: var(--font-size-lg);
+  transition: all var(--transition-fast);
+}
+
+.remove-btn:hover {
+  background: #dc2626;
+  transform: scale(1.1);
+}
+
+.upload-actions {
+  text-align: center;
+}
+
+@media (max-width: 768px) {
+  .file-item {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--spacing-2);
+  }
+  
+  .remove-btn {
+    align-self: flex-end;
+  }
+}
