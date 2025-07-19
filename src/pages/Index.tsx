@@ -7,6 +7,7 @@ import HowItWorks from '@/components/HowItWorks';
 import JobCreation from '@/components/JobCreation';
 import ResumeUpload from '@/components/ResumeUpload';
 import Results from '@/components/Results';
+import { processDocument, calculateMatchScore } from '@/utils/documentProcessor';
 
 interface JobData {
   title: string;
@@ -28,74 +29,53 @@ const Index = () => {
   const [currentStep, setCurrentStep] = useState<'job' | 'upload' | 'results'>('job');
   const [jobData, setJobData] = useState<JobData | null>(null);
   const [results, setResults] = useState<MatchResult[]>([]);
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
 
-  // Enhanced AI analysis function
-  const analyzeResumes = (files: File[]): MatchResult[] => {
-    const skillsArray = jobData?.skills.split(',').map(s => s.trim().toLowerCase()) || [];
-    const jobDescription = jobData?.description.toLowerCase() || '';
-    const experienceRequired = jobData?.experience.toLowerCase() || '';
+  // Real AI analysis function using document processing
+  const analyzeResumes = async (files: File[]): Promise<MatchResult[]> => {
+    const skillsArray = jobData?.skills.split(',').map(s => s.trim()) || [];
+    const jobDescription = jobData?.description || '';
+    const experienceRequired = jobData?.experience || '';
     
-    return files.map(file => {
-      // Simulate more sophisticated analysis
-      const fileName = file.name.toLowerCase();
-      
-      // Base score calculation
-      let score = 50;
-      
-      // Skill matching simulation (more realistic)
-      const commonTechSkills = ['javascript', 'python', 'react', 'node', 'sql', 'aws', 'docker', 'git'];
-      const advancedSkills = ['machine learning', 'ai', 'blockchain', 'microservices', 'kubernetes'];
-      
-      let matchedSkills: string[] = [];
-      let missingSkills: string[] = [];
-      
-      skillsArray.forEach(skill => {
-        // Simulate skill detection with some randomness for realism
-        const hasSkill = Math.random() > 0.3; // 70% chance of having each skill
-        
-        if (hasSkill) {
-          matchedSkills.push(skill);
-          score += 8; // Each matched skill adds points
-        } else {
-          missingSkills.push(skill);
+    const results = await Promise.all(
+      files.map(async (file) => {
+        try {
+          // Process the actual document content
+          const processedDoc = await processDocument(file);
+          
+          // Calculate real match score based on document analysis
+          const matchResult = calculateMatchScore(
+            skillsArray,
+            processedDoc.extractedSkills,
+            experienceRequired,
+            processedDoc.experienceLevel,
+            jobDescription,
+            processedDoc.text
+          );
+          
+          return {
+            fileName: file.name,
+            score: matchResult.score,
+            matchedSkills: matchResult.matchedSkills,
+            missingSkills: matchResult.missingSkills,
+            feedback: matchResult.feedback
+          };
+        } catch (error) {
+          console.error(`Error processing ${file.name}:`, error);
+          
+          // Fallback analysis if document processing fails
+          return {
+            fileName: file.name,
+            score: 0,
+            matchedSkills: [],
+            missingSkills: skillsArray,
+            feedback: 'Unable to process document. Please ensure the file is a valid PDF or DOCX document with readable text.'
+          };
         }
-      });
-      
-      // Experience level matching
-      if (experienceRequired.includes('senior') || experienceRequired.includes('lead')) {
-        score += Math.random() > 0.6 ? 15 : -10; // Senior roles are harder to match
-      } else if (experienceRequired.includes('junior') || experienceRequired.includes('entry')) {
-        score += Math.random() > 0.4 ? 10 : 0;
-      }
-      
-      // File name hints (simulate resume parsing)
-      if (fileName.includes('senior') || fileName.includes('lead')) score += 5;
-      if (fileName.includes('developer') || fileName.includes('engineer')) score += 3;
-      
-      // Ensure realistic score range
-      score = Math.min(95, Math.max(35, score + (Math.random() * 20 - 10)));
-      score = Math.round(score);
-      
-      // Generate contextual feedback
-      let feedback = '';
-      if (score >= 85) {
-        feedback = `Outstanding candidate profile. Demonstrates exceptional alignment with ${jobData?.title} requirements. Strong technical competencies in ${matchedSkills.slice(0, 3).join(', ')} with proven experience. ${missingSkills.length > 0 ? `Consider evaluating ${missingSkills[0]} during interview.` : 'Complete skill set match.'} Highly recommended for immediate interview.`;
-      } else if (score >= 75) {
-        feedback = `Excellent match with solid foundation in required technologies. Strong candidate showing ${matchedSkills.length} key skill matches including ${matchedSkills.slice(0, 2).join(' and ')}. ${missingSkills.length > 0 ? `Some development needed in ${missingSkills.slice(0, 2).join(' and ')}.` : ''} Recommended for technical interview to validate expertise.`;
-      } else if (score >= 60) {
-        feedback = `Good potential candidate with relevant background. Shows competency in ${matchedSkills.length} core areas. ${missingSkills.length > 0 ? `Skill gaps identified in ${missingSkills.slice(0, 2).join(' and ')} may require training or mentorship.` : ''} Consider for interview if willing to learn and grow.`;
-      } else {
-        feedback = `Candidate shows limited alignment with current requirements. While ${matchedSkills.length > 0 ? `some relevant skills (${matchedSkills[0]}) are present` : 'basic qualifications may exist'}, significant skill development needed in ${missingSkills.slice(0, 3).join(', ')}. May be suitable for junior role with extensive training program.`;
-      }
-
-      return {
-        fileName: file.name,
-        score,
-        matchedSkills,
-        missingSkills,
-        feedback
-      };
-    });
+      })
+    );
+    
+    return results;
   };
 
   const handleJobCreated = (job: JobData) => {
@@ -103,10 +83,18 @@ const Index = () => {
     setCurrentStep('upload');
   };
 
-  const handleResumesUploaded = (files: File[]) => {
-    const analysisResults = analyzeResumes(files);
-    setResults(analysisResults);
-    setCurrentStep('results');
+  const handleResumesUploaded = async (files: File[]) => {
+    setIsAnalyzing(true);
+    try {
+      const analysisResults = await analyzeResumes(files);
+      setResults(analysisResults);
+      setCurrentStep('results');
+    } catch (error) {
+      console.error('Analysis failed:', error);
+      // You could add error handling UI here
+    } finally {
+      setIsAnalyzing(false);
+    }
   };
 
   const resetAnalysis = () => {
@@ -144,7 +132,7 @@ const Index = () => {
               </div>
             </div>
           </div>
-          <ResumeUpload onResumesUploaded={handleResumesUploaded} />
+          <ResumeUpload onResumesUploaded={handleResumesUploaded} isAnalyzing={isAnalyzing} />
         </>
       )}
       

@@ -4,9 +4,10 @@ import './ResumeUpload.css';
 
 interface ResumeUploadProps {
   onResumesUploaded: (files: File[]) => void;
+  isAnalyzing?: boolean;
 }
 
-const ResumeUpload: React.FC<ResumeUploadProps> = ({ onResumesUploaded }) => {
+const ResumeUpload: React.FC<ResumeUploadProps> = ({ onResumesUploaded, isAnalyzing = false }) => {
   const [uploadedFiles, setUploadedFiles] = useState<File[]>([]);
   const [isDragOver, setIsDragOver] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -111,8 +112,16 @@ const ResumeUpload: React.FC<ResumeUploadProps> = ({ onResumesUploaded }) => {
                 <button 
                   className="btn btn-primary btn-large"
                   onClick={analyzeResumes}
+                  disabled={isAnalyzing}
                 >
-                  Analyze {uploadedFiles.length} Resume{uploadedFiles.length > 1 ? 's' : ''}
+                  {isAnalyzing ? (
+                    <>
+                      <span style={{ marginRight: '8px' }}>🔄</span>
+                      Analyzing {uploadedFiles.length} Resume{uploadedFiles.length > 1 ? 's' : ''}...
+                    </>
+                  ) : (
+                    <>Analyze {uploadedFiles.length} Resume{uploadedFiles.length > 1 ? 's' : ''}</>
+                  )}
                 </button>
               </div>
             </div>
