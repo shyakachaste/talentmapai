@@ -7,7 +7,7 @@ const Footer: React.FC = () => {
       <div className="container">
         <div className="footer-content">
           <div className="footer-text">
-            Copyright © All Rights Reserved Umurava 2025.
+            Copyright © All Rights Reserved Shyaka Chaste 2025.
           </div>
           <div className="footer-links">
             <a href="#privacy" className="footer-link">Privacy Policy</a>

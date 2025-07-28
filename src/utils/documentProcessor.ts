@@ -1,6 +1,7 @@
 import * as pdfjsLib from 'pdfjs-dist';
 import { TextItem } from 'pdfjs-dist/types/src/display/api';
 import * as mammoth from 'mammoth';
+import { validateFileUpload, sanitizeText, handleSecureError } from '../config/security';
 
 // Set up PDF.js worker
 pdfjsLib.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.js`;
@@ -59,6 +60,12 @@ const EXPERIENCE_INDICATORS = {
 };
 
 export async function processDocument(file: File): Promise<ProcessedDocument> {
+  // Security validation
+  const validation = validateFileUpload(file);
+  if (!validation.valid) {
+    throw new Error(validation.error);
+  }
+
   let text = '';
   
   try {
@@ -66,9 +73,12 @@ export async function processDocument(file: File): Promise<ProcessedDocument> {
       const arrayBuffer = await file.arrayBuffer();
       const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
       
+      // Security: Limit number of pages to prevent DoS
+      const maxPages = Math.min(pdf.numPages, 50);
+      
       // Extract text from all pages
       const textPromises = [];
-      for (let i = 1; i <= pdf.numPages; i++) {
+      for (let i = 1; i <= maxPages; i++) {
         textPromises.push(
           pdf.getPage(i).then(page => page.getTextContent()).then(textContent => 
             textContent.items
@@ -88,10 +98,14 @@ export async function processDocument(file: File): Promise<ProcessedDocument> {
     } else {
       throw new Error('Unsupported file type');
     }
+
+    // Security: Sanitize extracted text
+    text = sanitizeText(text);
+    
   } catch (error) {
-    console.error('Error processing document:', error);
-    // Fallback to filename-based analysis if document processing fails
-    text = file.name;
+    handleSecureError(error, 'document processing');
+    // Secure fallback - don't expose file content in error case
+    text = '';
   }
 
   return {
