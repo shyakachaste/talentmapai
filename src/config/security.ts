@@ -73,14 +73,14 @@ export const validateFileUpload = (file: File): { valid: boolean; error?: string
   return { valid: true };
 };
 
-// Sanitize text input to prevent XSS
+// Sanitize text input to prevent XSS while preserving ALL content for skill detection
 export const sanitizeText = (text: string): string => {
+  // Only remove the most dangerous content, preserve everything else
   return text
-    .replace(/[<>]/g, '') // Remove potential HTML tags
-    .replace(/javascript:/gi, '') // Remove javascript: URLs
-    .replace(/on\w+=/gi, '') // Remove event handlers
+    .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '') // Remove script tags only
+    .replace(/javascript\s*:/gi, 'js_protocol:') // Neutralize JS protocols
     .trim()
-    .substring(0, 50000); // Limit text length
+    .substring(0, 100000); // Increase limit to 100KB for large resumes
 };
 
 // Secure error handling

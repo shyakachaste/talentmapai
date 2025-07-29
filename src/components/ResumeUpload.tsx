@@ -15,10 +15,44 @@ const ResumeUpload: React.FC<ResumeUploadProps> = ({ onResumesUploaded, isAnalyz
   const handleFileSelect = (files: FileList | null) => {
     if (!files) return;
     
-    const fileArray = Array.from(files).filter(file => 
-      file.type === 'application/pdf' || 
-      file.type === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
-    );
+    const fileArray = Array.from(files).filter(file => {
+      const validTypes = [
+        'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+        'application/msword',
+        'text/plain'
+      ];
+      const validExtensions = ['.docx', '.doc', '.txt'];
+      const fileName = file.name.toLowerCase();
+      
+      // Check both MIME type and file extension for better compatibility
+      return validTypes.includes(file.type) || 
+             validExtensions.some(ext => fileName.endsWith(ext));
+    });
+    
+    // Show warning for rejected files
+    const rejectedFiles = Array.from(files).filter(file => {
+      const validTypes = [
+        'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+        'application/msword',
+        'text/plain'
+      ];
+      const validExtensions = ['.docx', '.doc', '.txt'];
+      const fileName = file.name.toLowerCase();
+      
+      return !validTypes.includes(file.type) && 
+             !validExtensions.some(ext => fileName.endsWith(ext));
+    });
+    
+    if (rejectedFiles.length > 0) {
+      alert(`⚠️ Unsupported file format(s): ${rejectedFiles.map(f => f.name).join(', ')}
+
+✅ SUPPORTED FORMATS:
+• TXT files (.txt) - RECOMMENDED for best results
+• DOCX files (.docx)
+• DOC files (.doc)
+
+💡 TIP: Save your resume as a TXT file for guaranteed compatibility!`);
+    }
     
     setUploadedFiles(prev => [...prev, ...fileArray]);
   };
@@ -74,13 +108,13 @@ const ResumeUpload: React.FC<ResumeUploadProps> = ({ onResumesUploaded, isAnalyz
             <h3>Drag & Drop Resumes Here</h3>
             <p>or click to browse files</p>
             <div className="supported-formats">
-              Supports PDF and DOCX files
+              Supports TXT (recommended), DOCX, and DOC files
             </div>
             <input
               ref={fileInputRef}
               type="file"
               multiple
-              accept=".pdf,.docx"
+              accept=".txt,.docx,.doc,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/msword,text/plain"
               onChange={(e) => handleFileSelect(e.target.files)}
               style={{ display: 'none' }}
             />
