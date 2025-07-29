@@ -61,6 +61,34 @@ TalentMap AI analyzes resumes and matches them against job requirements using ad
 - **File Support**: TXT (recommended) and DOCX formats
 - **Deployment**: Vite build system for optimal performance
 
+## 🛠️ Installation
+
+1. **Clone the repository:**
+   ```sh
+   git clone https://github.com/shyakachaste/talentmapai.git
+   cd talentmapai
+   ```
+2. **Install dependencies:**
+   ```sh
+   npm install
+   ```
+3. **Start the development server:**
+   ```sh
+   npm run dev
+   ```
+   The app will be available at [http://localhost:8080](http://localhost:8080)
+
+4. **Build for production:**
+   ```sh
+   npm run build
+   ```
+   The production build will be in the `dist/` folder.
+
+## 🧑‍💻 Requirements
+- Node.js (v18 or newer recommended)
+- npm (v9 or newer recommended)
+- Windows, Mac, or Linux
+
 ---
 
 *TalentMap AI - Making hiring decisions smarter, faster, and more objective.*
