@@ -19,7 +19,7 @@ const Header: React.FC = () => {
         <div className="header-content">
           <div className="logo">
             <span className="logo-text">TalentMap AI</span>
-            <span className="logo-subtitle">by Shyaka Chaste</span>
+            <span className="logo-subtitle">by Umurava</span>
           </div>
           
           <nav className="nav">
