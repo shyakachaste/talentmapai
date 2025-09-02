@@ -1,5 +1,12 @@
 // TalentMap AI Document Processor - Clean Working Version
 import * as mammoth from 'mammoth';
+// PDF.js static imports for Vite
+import { getDocument as pdfjsGetDocument, GlobalWorkerOptions as pdfjsGlobalWorkerOptions } from 'pdfjs-dist';
+// Initialize pdf.js worker using Vite-friendly URL
+// @ts-ignore - Worker typing not strict here
+const __pdfWorkerInstance = new Worker(new URL('pdfjs-dist/build/pdf.worker.min.js', import.meta.url), { type: 'module' });
+// @ts-ignore - pdfjs types
+pdfjsGlobalWorkerOptions.workerPort = __pdfWorkerInstance;
 
 export interface ProcessedDocument {
   text: string;
@@ -194,8 +201,20 @@ export async function processDocument(file: File): Promise<ProcessedDocument> {
         throw new Error('Failed to process DOCX file. Try saving as TXT for best results.');
       }
     } 
+    else if (file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf')) {
+      console.log('✅ Processing PDF file');
+      try {
+        text = await extractTextFromPDF(file);
+        if (text.length < 20) {
+          throw new Error('PDF file contains very little text');
+        }
+      } catch (pdfError) {
+        console.error('❌ PDF processing failed:', pdfError);
+        throw new Error('Failed to process PDF file. Please ensure it is a text-based PDF.');
+      }
+    }
     else {
-      throw new Error('Unsupported file format. Please use TXT or DOCX files.');
+      throw new Error('Unsupported file format. Please use TXT, DOCX or PDF files.');
     }
     
     if (!text || text.trim().length < 10) {
@@ -227,6 +246,23 @@ export async function processDocument(file: File): Promise<ProcessedDocument> {
   console.log('🎯 Processing complete. Skills found:', result.extractedSkills);
   
   return result;
+}
+
+// Extract text using pdf.js
+async function extractTextFromPDF(file: File): Promise<string> {
+  const arrayBuffer = await file.arrayBuffer();
+  const loadingTask = pdfjsGetDocument({ data: arrayBuffer });
+  const pdf = await loadingTask.promise;
+  let fullText = '';
+  for (let pageNum = 1; pageNum <= pdf.numPages; pageNum += 1) {
+    const page = await pdf.getPage(pageNum);
+    const textContent = await page.getTextContent();
+    const strings = (textContent.items as any[])
+      .map((item: any) => (item && typeof item.str === 'string' ? item.str : ''))
+      .filter(Boolean);
+    fullText += strings.join(' ') + '\n';
+  }
+  return fullText;
 }
 
 function extractSkills(text: string): string[] {
@@ -528,25 +564,26 @@ export function calculateMatchScore(
   }
   
   const skillScore = jobSkills.length > 0 ? (matchedSkills.length / jobSkills.length) * 60 : 60;
-  
+
+  // Years of experience evaluation (up to 25)
+  const requiredYears = extractRequiredYears(jobExperience, jobDescription);
+  const candidateYears = extractYearsOfExperience(candidateText);
   let experienceScore = 25;
-  if (jobExperience && candidateExperience) {
+  if (requiredYears > 0) {
+    if (candidateYears >= requiredYears) experienceScore = 25;
+    else if (candidateYears >= requiredYears - 1) experienceScore = 18;
+    else if (candidateYears >= Math.max(0, requiredYears - 3)) experienceScore = 12;
+    else experienceScore = 5;
+  } else if (jobExperience && candidateExperience) {
     const jobExp = jobExperience.toLowerCase();
-    const candidateExp = candidateExperience.toLowerCase();
-    
-    if (jobExp === candidateExp) {
-      experienceScore = 25;
-    } else if (
-      (jobExp.includes('senior') && candidateExp === 'mid') ||
-      (jobExp.includes('mid') && candidateExp === 'junior')
-    ) {
-      experienceScore = 15;
-    } else {
-      experienceScore = 10;
-    }
+    const candExp = candidateExperience.toLowerCase();
+    if (jobExp === candExp) experienceScore = 25;
+    else if ((jobExp.includes('senior') && candExp === 'mid') || (jobExp.includes('mid') && candExp === 'junior')) experienceScore = 15;
+    else experienceScore = 10;
   }
-  
-  const contextScore = 15;
+
+  // Contextual alignment from job description (up to 15)
+  const contextScore = calculateContextScore(jobDescription, candidateText, 15);
   const totalScore = Math.max(0, Math.min(100, Math.round(skillScore + experienceScore + contextScore)));
   
   const feedback = generateFeedback(totalScore, matchedSkills, missingSkills, jobExperience, candidateExperience);
@@ -560,7 +597,7 @@ export function calculateMatchScore(
     feedback,
     detailedAnalysis: {
       skillsAnalysis: { matched: matchedSkills, missing: missingSkills },
-      experienceAnalysis: { required: jobExperience, candidate: candidateExperience },
+      experienceAnalysis: { required: requiredYears > 0 ? `${requiredYears}+ years` : jobExperience, candidate: `${candidateYears} years (${candidateExperience})` },
       languageAnalysis: {},
       educationAnalysis: {}
     }
@@ -610,6 +647,35 @@ function areSkillsSimilar(skill1: string, skill2: string): boolean {
   }
   
   return false;
+}
+
+function extractRequiredYears(jobExperience: string, jobDescription: string): number {
+  const text = `${jobExperience || ''} ${jobDescription || ''}`.toLowerCase();
+  let maxYears = 0;
+  const rangeMatch = text.match(/(\d+)\s*[–-]\s*(\d+)\s*years?/);
+  if (rangeMatch) {
+    const hi = parseInt(rangeMatch[2]);
+    if (!isNaN(hi)) maxYears = Math.max(maxYears, hi);
+  }
+  const singleRegex = /(at least\s*)?(\d+)\+?\s*years?/g;
+  let m: RegExpExecArray | null;
+  while ((m = singleRegex.exec(text)) !== null) {
+    const yrs = parseInt(m[2]);
+    if (!isNaN(yrs) && yrs > maxYears) maxYears = yrs;
+  }
+  return maxYears;
+}
+
+function calculateContextScore(jobDescription: string, candidateText: string, maxPoints: number): number {
+  const jd = (jobDescription || '').toLowerCase();
+  const ct = (candidateText || '').toLowerCase();
+  if (!jd || !ct) return 0;
+  const stop = new Set(['and','or','the','a','an','with','to','for','of','in','on','at','by','from','as','is','are','be','this','that','it','you','your','we','our']);
+  const words = Array.from(new Set(jd.split(/[^a-z0-9+#.]/i).filter(w => w && w.length > 2 && !stop.has(w))));
+  if (words.length === 0) return 0;
+  const hits = words.reduce((acc, w) => acc + (ct.includes(w) ? 1 : 0), 0);
+  const ratio = hits / Math.min(words.length, 50); // cap influence
+  return Math.min(maxPoints, Math.round(maxPoints * ratio));
 }
 
 function generateFeedback(

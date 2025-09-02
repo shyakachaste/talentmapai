@@ -19,4 +19,21 @@ export default defineConfig(({ mode }) => ({
       "@": path.resolve(__dirname, "./src"),
     },
   },
+  optimizeDeps: {
+    include: ['pdfjs-dist'],
+    exclude: []
+  },
+  build: {
+    rollupOptions: {
+      output: {
+        // Make sure worker assets get emitted
+        assetFileNames: (assetInfo) => {
+          if (assetInfo.name && assetInfo.name.includes('pdf.worker')) {
+            return 'assets/[name]-[hash][extname]';
+          }
+          return 'assets/[name]-[hash][extname]';
+        }
+      }
+    }
+  },
 }));

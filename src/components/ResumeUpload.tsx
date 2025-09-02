@@ -19,9 +19,10 @@ const ResumeUpload: React.FC<ResumeUploadProps> = ({ onResumesUploaded, isAnalyz
       const validTypes = [
         'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
         'application/msword',
-        'text/plain'
+        'text/plain',
+        'application/pdf'
       ];
-      const validExtensions = ['.docx', '.doc', '.txt'];
+      const validExtensions = ['.docx', '.doc', '.txt', '.pdf'];
       const fileName = file.name.toLowerCase();
       
       // Check both MIME type and file extension for better compatibility
@@ -34,9 +35,10 @@ const ResumeUpload: React.FC<ResumeUploadProps> = ({ onResumesUploaded, isAnalyz
       const validTypes = [
         'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
         'application/msword',
-        'text/plain'
+        'text/plain',
+        'application/pdf'
       ];
-      const validExtensions = ['.docx', '.doc', '.txt'];
+      const validExtensions = ['.docx', '.doc', '.txt', '.pdf'];
       const fileName = file.name.toLowerCase();
       
       return !validTypes.includes(file.type) && 
@@ -50,6 +52,7 @@ const ResumeUpload: React.FC<ResumeUploadProps> = ({ onResumesUploaded, isAnalyz
 • TXT files (.txt) - RECOMMENDED for best results
 • DOCX files (.docx)
 • DOC files (.doc)
+• PDF files (.pdf)
 
 💡 TIP: Save your resume as a TXT file for guaranteed compatibility!`);
     }
@@ -108,13 +111,13 @@ const ResumeUpload: React.FC<ResumeUploadProps> = ({ onResumesUploaded, isAnalyz
             <h3>Drag & Drop Resumes Here</h3>
             <p>or click to browse files</p>
             <div className="supported-formats">
-              Supports TXT (recommended), DOCX, and DOC files
+              Supports TXT (recommended), DOCX, DOC, and PDF files
             </div>
             <input
               ref={fileInputRef}
               type="file"
               multiple
-              accept=".txt,.docx,.doc,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/msword,text/plain"
+              accept=".txt,.docx,.doc,.pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/msword,application/pdf,text/plain"
               onChange={(e) => handleFileSelect(e.target.files)}
               style={{ display: 'none' }}
             />
